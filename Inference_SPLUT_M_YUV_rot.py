@@ -1,33 +1,18 @@
 
-from PIL import Image
+
 import numpy as np
-from os import mkdir
-from os.path import isdir
 from tqdm import tqdm
-import cv2
+
 import glob
-# from basicsr_utils import tensor2img
-# from basicsr_metrics import calculate_psnr,calculate_ssim
-import torch
-
-
-from utils import PSNR, GeneratorEnqueuer, DirectoryIterator_DIV2K, _load_img_array, _rgb2ycbcr,_getHW,_getYdata
+from utils import PSNR,_getHW,_getYdata
 
 UPSCALE = 2     # upscaling factor
-TEST_DIR = 'F:\JJ\DATASET\AV1_DATA\AVM_SUPERRES_DATA'      # Test images
+TEST_DIR = './TestSet'      # Test images
 EXP_NAME = "SPLUT_0227"
 
 global LUTA1_122, LUTA2_221, LUTA2_212, LUTA3_221, LUTA3_212
 global LUTB1_122, LUTB2_221, LUTB2_212, LUTB3_221, LUTB3_212
 
-
-# # Test LR images
-# files_lr = glob.glob(TEST_DIR + '/div2k_val_LR_AVM/x{}/qp{}/*.yuv'.format(UPSCALE,QP))
-# files_lr.sort()
-#
-# # Test GT images
-# files_gt = glob.glob(TEST_DIR + '/div2k_val_HR/label/*.yuv')
-# files_gt.sort()
 
 L = 16
 
@@ -79,10 +64,7 @@ def channel_shuffle(x, groups):
 
     num_channels, height, width = x.shape
     channels_per_group = num_channels // groups
-    # num_channels = groups * channels_per_group
 
-    # grouping, 通道分组
-    # num_channels, h, w =======>  groups, channels_per_group, h, w
     x = np.reshape(x,[groups, channels_per_group, height, width])
     # channel shuffle, 通道洗牌
     x = x.transpose(1,0,2,3)
@@ -92,8 +74,6 @@ def channel_shuffle(x, groups):
 
     return x
 
-def save_img(filename, rec):
-    cv2.imwrite(filename, rec)
 
 def init(upscale, qp):
     global LUTA1_122, LUTA2_221, LUTA2_212, LUTA3_221, LUTA3_212
@@ -239,13 +219,7 @@ def superres_rot(src,upscale):
     img_out_B = (np.clip(img_out_B / avg_factor, -1, 1))
     img_out = img_out_A+ img_out_B
     img_out = np.round(np.clip(img_out, 0, 1) * 255).astype(np.uint8)
-    # print("img_out.shape", img_out.shape)
-    # print("-------------------")
 
-    # rec = np.asarray(img_out, dtype='float32')
-    # im = Image.fromarray(rec)
-    # im.show()
-    # save_img(rec)
 
     rec = np.around(img_out)
     rec = rec.astype('int')
@@ -261,13 +235,14 @@ if __name__ == '__main__':
     files_lr.sort()
 
     # Test GT images
-    files_gt = glob.glob(TEST_DIR + '/div2k_val_HR/label/*.yuv')
+    files_gt = glob.glob(TEST_DIR + '/label/*.yuv')
     files_gt.sort()
 
     psnrs = []
     for ti, fn in enumerate(tqdm(files_gt)):
         # if(ti!=6):
         #     continue
+
         # Load LR image
         W, H = _getHW(files_lr[ti], -1)
         tmp = _getYdata(files_lr[ti],[W, H],norm=False)
@@ -276,7 +251,7 @@ if __name__ == '__main__':
         h, w= img_lr.shape
 
         # Load GT image
-        W, H = _getHW(files_gt[ti], -2)
+        W, H = _getHW(files_gt[ti], -4)
         tmp = _getYdata(files_gt[ti],[W, H],norm=False)
         img_gt = np.asarray(tmp).astype(np.float32)  # HxWxC
         img_gt = img_gt[:, :, None]
